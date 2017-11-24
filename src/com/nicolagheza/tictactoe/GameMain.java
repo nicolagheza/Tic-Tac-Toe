@@ -10,7 +10,7 @@ import java.awt.event.MouseEvent;
 public class GameMain extends JPanel{
 
     private static final long serialVersionUID = 0L;
-    private static final int TIMER_DELAY = 500;
+    private static final int TIMER_DELAY = 30;
 
     // Named-constants for the game board
     public static final int ROWS = 3;  // ROWS by COLS cells
@@ -83,9 +83,20 @@ public class GameMain extends JPanel{
     }
 
     private void initAI() {
-        aiPlayer1 = new AIPlayerMinimax(board);
+        float[] weights1 = new float[7];
+        weights1[0] = 1;
+        weights1[1] = (float)2.222119E38;
+        weights1[2]  = (float) 2.2665597E38;
+        weights1[3]  = (float) 2.222119E38;
+        weights1[4] = (float) 2.2665597E38;
+        weights1[5] = (float) -8.88881E36;
+        weights1[6] = (float)2.3554548E38;
+
+        float[] weights2 = new float[] {1f, 0.2f, -0.3f, 0.6f, -0.2f, 0.1f, -0.4f};
+
+        aiPlayer1 = new AIPlayerLearner(board, weights1);
         aiPlayer1.setSeed(Seed.CROSS);
-        aiPlayer2 = new AIPlayerMinimax(board);
+        aiPlayer2 = new AIPlayerLearner(board, weights2);
         aiPlayer2.setSeed(Seed.NOUGHT);
     }
 
@@ -104,11 +115,15 @@ public class GameMain extends JPanel{
     public void makeAIMove(AIPlayer player) {
 
         int[] move = player.move();
-        if (move != null) {
+        try {
             board.cells[move[0]][move[1]].content = player.mySeed;
+            board.gameHistory.add(board.clone());
             updateGame(currentPlayer, move[0], move[1]);
             repaint();
             currentPlayer = (currentPlayer == Seed.CROSS) ? Seed.NOUGHT : Seed.CROSS;
+        } catch (Exception e) {
+            System.out.println("Move was null");
+            e.printStackTrace();
         }
 
     }
@@ -117,8 +132,14 @@ public class GameMain extends JPanel{
     public void updateGame(Seed theSeed, int row, int col) {
         if(board.hasWon(theSeed, row, col)) { // check for win
             currentState = (theSeed == Seed.CROSS) ? GameState.CROSS_WON : GameState.NOUGHT_WON;
+            if (aiPlayer1.getClass() == AIPlayerLearner.class) {
+                ((AIPlayerLearner) aiPlayer1).updateWeights(board.gameHistory);
+            }
         } else if (board.isDraw()) { // check for draw
             currentState = GameState.DRAW;
+            if (aiPlayer1.getClass() == AIPlayerLearner.class) {
+                ((AIPlayerLearner) aiPlayer1).updateWeights(board.gameHistory);
+            }
         }
         // Otherwise, no change to current state (PLAYING).
     }
@@ -174,16 +195,17 @@ public class GameMain extends JPanel{
                 frame.setLocationRelativeTo(null);
                 frame.setVisible(true);
 
-
-                new javax.swing.Timer(TIMER_DELAY, new ActionListener() {
-                    @Override
-                    public void actionPerformed(ActionEvent e) {
-                        if (game.currentState != GameState.PLAYING)
-                                return;
-                        game.getNextState();
-                    }
-                }).start();
-
+                for (int i=0; i<1; i++) {
+                    new javax.swing.Timer(TIMER_DELAY, new ActionListener() {
+                        @Override
+                        public void actionPerformed(ActionEvent e) {
+                            if (game.currentState != GameState.PLAYING) {
+                                game.initGame();
+                            }
+                            game.getNextState();
+                        }
+                    }).start();
+                }
 
             }
         });

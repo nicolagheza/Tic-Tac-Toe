@@ -1,6 +1,12 @@
 package com.nicolagheza.tictactoe;
 
+import java.util.ArrayList;
+
 public class Board {
+    protected int ROWS = GameMain.ROWS; // number of rows
+    protected int COLS = GameMain.COLS; // number of cols
+
+    ArrayList<Board> gameHistory;
 
     // package access
     Cell[][] cells; // 2D array of ROWS-by-COLS Cell instances
@@ -13,6 +19,26 @@ public class Board {
                 cells[row][col] = new Cell(row, col); // allocate element of array
             }
         }
+        this.gameHistory = new ArrayList<Board>();
+    }
+
+    public Board clone() {
+        Board board = new Board();
+        Board newBoard = new Board();
+        newBoard.cells = copyBoard(this.cells, 3);
+
+        return newBoard;
+    }
+
+    private Cell[][] copyBoard(Cell[][] original, int dimension) {
+        Cell[][] copy = new Cell[dimension][dimension];
+
+        for (int i = 0; i < dimension; i++) {
+            for (int j = 0; j < dimension; j++) {
+                copy[i][j] = original[i][j];
+            }
+        }
+        return copy;
     }
 
     /** Initialize (or re-initialize) the game board */
@@ -52,6 +78,27 @@ public class Board {
                    && cells[0][2].content == seed
                    && cells[1][1].content == seed
                    && cells[2][0].content == seed);
+    }
+
+    protected int[] winningPatterns = {
+            0b111000000, 0b000111000, 0b000000111, // rows
+            0b100100100, 0b010010010, 0b001001001, // cols
+            0b100010001, 0b001010100               // diagonals
+    };
+
+    public boolean hasWon(Seed thePlayer) {
+        int pattern = 0b000000000;  // 9-bit pattern for the 9 cells
+        for (int row = 0; row < ROWS; ++row) {
+            for (int col = 0; col < COLS; ++col) {
+                if (cells[row][col].content == thePlayer) {
+                    pattern |= (1 << (row * COLS + col));
+                }
+            }
+        }
+        for (int winningPattern : winningPatterns) {
+            if ((pattern & winningPattern) == winningPattern) return true;
+        }
+        return false;
     }
 
 }
